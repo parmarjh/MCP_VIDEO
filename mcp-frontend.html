@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Video Creation App</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+  <style>
+    .video-container {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 Aspect Ratio */
+    }
+    .video-container video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+    .timeline {
+      height: 80px;
+      background: #2d3748;
+      position: relative;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .clip {
+      display: inline-block;
+      height: 60px;
+      background: #4a5568;
+      margin: 10px 5px;
+      border-radius: 4px;
+      min-width: 100px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .clip.active {
+      border: 2px solid #4299e1;
+    }
+    .clip-label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0,0,0,0.5);
+      color: white;
+      padding: 2px 4px;
+      font-size: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white">
+  <div class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-gray-800 shadow-lg">
+      <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-blue-400">MCP Video Creation App</h1>
+        <nav>
+          <ul class="flex space-x-4">
+            <li><button id="newProjectBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md">New Project</button></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+      <div id="welcomeScreen" class="flex flex-col items-center justify-center h-full">
+        <h2 class="text-3xl mb-4">Welcome to MCP Video Creation App</h2>
+        <p class="text-gray-400 mb-8">Create a new project or select an existing one to get started</p>
+        <button id="createFirstProject" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-md text-lg">Create Your First Project</button>
+      </div>
+
+      <div id="projectScreen" class="hidden">
+        <div class="grid grid-cols-12 gap-6">
+          <!-- Left sidebar -->
+          <div class="col-span-3 bg-gray-800 rounded-lg p-4">
+            <h2 class="text-xl font-bold mb-4">Projects</h2>
+            <ul id="projectsList" class="space-y-2">
+              <!-- Projects will be listed here -->
+            </ul>
+            <div class="mt-4">
+              <h3 class="text-lg font-bold mb-2">Current Project</h3>
+              <div id="currentProject" class="text-gray-400">No project selected</div>
+            </div>
+          </div>
+
+          <!-- Main editor area -->
+          <div class="col-span-9">
+            <!-- Video preview -->
+            <div class="bg-gray-800 rounded-lg p-4 mb-6">
+              <h3 class="text-lg font-bold mb-4">Preview</h3>
+              <div class="video-container mb-4">
+                <video id="videoPreview" controls>
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              <div class="flex justify-between">
+                <div>
+                  <button id="playBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md mr-2">Play</button>
+                  <button id="pauseBtn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-md">Pause</button>
+                </div>
+                <div>
+                  <span id="currentTime" class="mr-2">00:00</span> / 
+                  <span id="duration" class="ml-2">00:00</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="bg-gray-800 rounded-lg p-4 mb-6">
+              <h3 class="text-lg font-bold mb-4">Timeline</h3>
+              <div class="timeline" id="timeline">
+                <!-- Clips will be added here -->
+              </div>
+            </div>
+
+            <!-- Tools -->
+            <div class="grid grid-cols-2 gap-6">
+              <!-- Media Library -->
+              <div class="bg-gray-800 rounded-lg p-4">
+                <h3 class="text-lg font-bold mb-4">Media Library</h3>
+                <form id="uploadForm" class="mb-4">
+                  <div class="flex">
+                    <input type="file" id="videoInput" name="video" accept="video/*" class="bg-gray-700 text-gray-300 px-3 py-2 rounded-l-md flex-grow">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-r-md">Upload</button>
+                  </div>
+                </form>
+                <div id="mediaList" class="space-y-2 max-h-60 overflow-y-auto">
+                  <!-- Media items will be listed here -->
+                </div>
+              </div>
+
+              <!-- Edit Tools -->
+              <div class="bg-gray-800 rounded-lg p-4">
+                <h3 class="text-lg font-bold mb-4">Edit Tools</h3>
+                <div id="editTools" class="space-y-4">
+                  <!-- Trim -->
+                  <div class="bg-gray-700 p-3 rounded-md">
+                    <h4 class="font-bold mb-2">Trim</h4>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                      <div>
+                        <label class="block text-sm text-gray-400">Start (seconds)</label>
+                        <input type="number" id="trimStart" min="0" step="0.1" value="0" class="bg-gray-600 text-white px-3 py-1 rounded w-full">
+                      </div>
+                      <div>
+                        <label class="block text-sm text-gray-400">Duration (seconds)</label>
+                        <input type="number" id="trimDuration" min="0.1" step="0.1" value="5" class="bg-gray-600 text-white px-3 py-1 rounded w-full">
+                      </div>
+                    </div>
+                    <button id="trimBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded-md w-full">Apply Trim</button>
+                  </div>
+
+                  <!-- Resize -->
+                  <div class="bg-gray-700 p-3 rounded-md">
+                    <h4 class="font-bold mb-2">Resize</h4>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                      <div>
+                        <label class="block text-sm text-gray-400">Width</label>
+                        <input type="number" id="resizeWidth" min="1" value="1280" class="bg-gray-600 text-white px-3 py-1 rounded w-full">
+                      </div>
+                      <div>
+                        <label class="block text-sm text-gray-400">Height</label>
+                        <input type="number" id="resizeHeight" min="1" value="720" class="bg-gray-600 text-white px-3 py-1 rounded w-full">
+                      </div>
+                    </div>
+                    <button id="resizeBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded-md w-full">Apply Resize</button>
+                  </div>
+
+                  <!-- Filters -->
+                  <div class="bg-gray-700 p-3 rounded-md">
+                    <h4 class="font-bold mb-2">Filters</h4>
+                    <button id="grayscaleBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded-md w-full">Apply Grayscale</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 py-4">
+      <div class="container mx-auto px-4 text-center text-gray-400">
+        <p>MCP Video Creation App - Server-Based Video Editor</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Modal for creating new project -->
+  <div id="newProjectModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+      <h2 class="text-xl font-bold mb-4">Create New Project</h2>
+      <form id="newProjectForm">
+        <div class="mb-4">
+          <label class="block text-gray-400 mb-2">Project Name</label>
+          <input type="text" id="projectName" required class="bg-gray-700 text-white px-4 py-2 rounded w-full">
+        </div>
+        <div class="mb-6">
+          <label class="block text-gray-400 mb-2">Description (optional)</label>
+          <textarea id="projectDescription" class="bg-gray-700 text-white px-4 py-2 rounded w-full"></textarea>
+        </div>
+        <div class="flex justify-end space-x-3">
+          <button type="button" id="cancelNewProject" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-md">Cancel</button>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md">Create Project</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading indicator -->
+  <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden">
+    <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md text-center">
+      <svg class="animate-spin h-10 w-10 text-blue-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <p id="loadingMessage" class="text-lg">Processing your video...</p>
+    </div>
+  </div>
+
+  <script>
+    // App state
+    const state = {
+      projects: [],
+      currentProject: null,
+      selectedClip: null,
+      apiUrl: 'http://localhost:3000/api'
+    };
+
+    // DOM elements
+    const elements = {
+      welcomeScreen: document.getElementById('welcomeScreen'),
+      projectScreen: document.getElementById('projectScreen'),
+      projectsList: document.getElementById('projectsList'),
+      currentProject: document.getElementById('currentProject'),
+      mediaList: document.getElementById('mediaList'),
+      videoPreview: document.getElementById('videoPreview'),
+      timeline: document.getElementById('timeline'),
+      newProjectBtn: document.getElementById('newProjectBtn'),
+      createFirstProject: document.getElementById('createFirstProject'),
+      newProjectModal: document.getElementById('newProjectModal'),
+      newProjectForm: document.getElementById('newProjectForm'),
+      cancelNewProject: document.getElementById('cancelNewProject'),
+      uploadForm: document.getElementById('uploadForm'),
+      loadingOverlay: document.getElementById('loadingOverlay'),
+      loadingMessage: document.getElementById('loadingMessage'),
+      playBtn: document.getElementById('playBtn'),
+      pauseBtn: document.getElementById('pauseBtn'),
+      currentTime: document.getElementById('currentTime'),
+      duration: document.getElementById('duration'),
+      trimBtn: document.getElementById('trimBtn'),
+      resizeBtn: document.getElementById('resizeBtn'),
+      grayscaleBtn: document.getElementById('grayscaleBtn')
+    };
+
+    // Format time (seconds to MM:SS)
+    function formatTime(seconds) {
+      seconds = Math.floor(seconds);
+      const mins = Math.floor(seconds / 60);
+      seconds = seconds % 60;
+      return `${mins.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    // Initialize the app
+    async function init() {
+      try {
+        // Fetch projects
+        const response = await fetch(`${state.apiUrl}/projects`);
+        state.projects = await response.json();
+        
+        // Update UI based on projects
+        if (state.projects.length > 0) {
+          renderProjects();
+          showProjectScreen();
+        } else {
+          showWelcomeScreen();
+        }
+        
+        // Set up event listeners
+        setupEventListeners();
+      } catch (error) {
+        console.error('Error initializing app:', error);
+        alert('Failed to initialize the app. Please try again.');
+      }
+    }
+
+    // Render projects list
+    function renderProjects() {
+      elements.projectsList.innerHTML = '';
+      state.projects.forEach(project => {
+        const li = document.createElement('li');
+        li.className = 'bg-gray-700 px-3 py-2 rounded-md hover:bg-gray-600 cursor-pointer';
+        if (state.currentProject && state.currentProject.id === project.id) {
+          li.classList.add('border', 'border-blue-500');
+        }
+        li.textContent = project.name;
+        li.addEventListener('click', () => selectProject(project));
+        elements.projectsList.appendChild(li);
+      });
+    }
+
+    // Select a project
+    function selectProject(project) {
+      state.currentProject = project;
+      state.selectedClip = null;
+      
+      // Update UI
+      elements.currentProject.textContent = project.name;
+      renderProjects();
+      renderMedia();
+      renderTimeline();
+      
+      // Clear video preview
+      elements.videoPreview.src = '';
+    }
+
+    // Render media library
+    function renderMedia() {
+      elements.mediaList.innerHTML = '';
+      if (!state.currentProject) return;
+      
+      state.currentProject.clips.forEach(clip => {
+        const div = document.createElement('div');
+        div.className = 'bg-gray-700 p-2 rounded-md hover:bg-gray-600 cursor-pointer flex items-center';
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'flex-grow truncate';
+        nameSpan.textContent = clip.originalName || clip.filename;
+        div.appendChild(nameSpan);
+        
+        div.addEventListener('click', () => {
+          let videoUrl;
+          if (clip.path && clip.path.includes('processed')) {
+            const filename = clip.path.split('/').pop();
+            videoUrl = `/processed/${filename}`;
+          } else {
+            videoUrl = `/uploads/${clip.filename}`;
+          }
+          
+          elements.videoPreview.src = videoUrl;
+          elements.videoPreview.load();
+          state.selectedClip = clip;
+          
+          // Update timeline selection
+          const timelineClips = elements.timeline.querySelectorAll('.clip');
+          timelineClips.forEach(el => {
+            el.classList.remove('active');
+            if (el.dataset.clipId === clip.id) {
+              el.classList.add('active');
+            }
+          });
+        });
+        
+        elements.mediaList.appendChild(div);
+      });
+    }
+
+    // Render timeline
+    function renderTimeline() {
+      elements.timeline.innerHTML = '';
+      if (!state.currentProject) return;
+      
+      state.currentProject.clips.forEach(clip => {
+        const clipEl = document.createElement('div');
+        clipEl.className = 'clip';
+        clipEl.dataset.clipId = clip.id;
+        
+        if (state.selectedClip && state.selectedClip.id === clip.id) {
+          clipEl.classList.add('active');
+        }
+        
+        const clipLabel = document.createElement('div');
+        clipLabel.className = 'clip-label';
+        clipLabel.textContent = clip.originalName || clip.filename;
+        clipEl.appendChild(clipLabel);
+        
+        clipEl.addEventListener('click', () => {
+          let videoUrl;
+          if (clip.path && clip.path.includes('processed')) {
+            const filename = clip.path.split('/').pop();
+            videoUrl = `/processed/${filename}`;
+          } else {
+            videoUrl = `/uploads/${clip.filename}`;
+          }
+          
+          elements.videoPreview.src = videoUrl;
+          elements.videoPreview.load();
+          state.selectedClip = clip;
+          
+          // Update selection
+          const allClips = elements.timeline.querySelectorAll('.clip');
+          allClips.forEach(el => el.classList.remove('active'));
+          clipEl.classList.add('active');
+        });
+        
+        elements.timeline.appendChild(clipEl);
+      });
+    }
+
+    // Show welcome screen
+    function showWelcomeScreen() {
+      elements.welcomeScreen.classList.remove('hidden');
+      elements.projectScreen.classList.add('hidden');
+    }
+
+    // Show project screen
+    function showProjectScreen() {
+      elements.welcomeScreen.classList.add('hidden');
+      elements.projectScreen.classList.remove('hidden');
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+      // New project buttons
+      elements.newProjectBtn.addEventListener('click', () => {
+        elements.newProjectModal.classList.remove('hidden');
+      });
+      
+      elements.createFirstProject.addEventListener('click', () => {
+        elements.newProjectModal.classList.remove('hidden');
+      });
+      
+      elements.cancelNewProject.addEventListener('click', () => {
+        elements.newProjectModal.classList.add('hidden');
+      });
+      
+      // New project form submission
+      elements.newProjectForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        
+        const name = document.getElementById('projectName').value;
+        const description = document.getElementById('projectDescription').value;
+        
+        try {
+          const response = await fetch(`${state.apiUrl}/projects`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name, description })
+          });
+          
+          const newProject = await response.json();
+          state.projects.push(newProject);
+          selectProject(newProject);
+          elements.newProjectModal.classList.add('hidden');
+          showProjectScreen();
+          renderProjects();
+          
+          // Reset the form
+          elements.newProjectForm.reset();
+        } catch (error) {
+          console.error('Error creating project:', error);
+          alert('Failed to create project. Please try again.');
+        }
+      });
+      
+      // File upload
+      elements.uploadForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        
+        if (!state.currentProject) {
+          alert('Please select a project first');
+          return;
+        }
+        
+        const fileInput = document.getElementById('videoInput');
+        if (fileInput.files.length === 0) {
+          alert('Please select a video file to upload');
+          return;
+        }
+        
+        const formData = new FormData();
+        formData.append('video', fileInput.files[0]);
+        formData.append('projectId', state.currentProject.id);
+        
+        showLoading('Uploading video...');
+        
+        try {
+          const response = await fetch(`${state.apiUrl}/upload`, {
+            method: 'POST',
+            body: formData
+          });
+          
+          const result = await response.json();
+          if (response.ok) {
+            state.currentProject.clips.push(result);
+            renderMedia();
+            renderTimeline();
+            elements.uploadForm.reset();
+            hideLoading();
+          } else {
+            throw new Error(result.error || 'Upload failed');
+          }
+        } catch (error) {
+          console.error('Error uploading video:', error);
+          alert('Failed to upload video. Please try again.');
+          hideLoading();
+        }
+      });
+      
+      // Video playback controls
+      elements.playBtn.addEventListener('click', () => {
+        if (elements.videoPreview.src) {
+          elements.videoPreview.play();
+        }
+      });
+      
+      elements.pauseBtn.addEventListener('click', () => {
+        elements.videoPreview.pause();
+      });
+      
+      elements.videoPreview.addEventListener('timeupdate', () => {
+        elements.currentTime.textContent = formatTime(elements.videoPreview.currentTime);
+      });
+      
+      elements.videoPreview.addEventListener('loadedmetadata', () => {
+        elements.duration.textContent = formatTime(elements.videoPreview.duration);
+      });
+      
+      // Video processing buttons
+      elements.trimBtn.addEventListener('click', async () => {
+        if (!state.selectedClip) {
+          alert('Please select a clip first');
+          return;
+        }
+        
+        const start = document.getElementById('trimStart').value;
+        const duration = document.getElementById('trimDuration').value;
+        
+        showLoading('Trimming video...');
+        
+        try {
+          const response = await fetch(`${state.apiUrl}/process`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              projectId: state.currentProject.id,
+              clipId: state.selectedClip.id,
+              operation: 'trim',
+              start,
+              duration
+            })
+          });
+          
+          const result = await response.json();
+          if (response.ok) {
+            state.currentProject.clips.push(result.clip);
+            renderMedia();
+            renderTimeline();
+            
+            // Update preview to show the processed clip
+            elements.videoPreview.src = result.url;
+            elements.videoPreview.load();
+            state.selectedClip = result.clip;
+          } else {
+            throw new Error(result.error || 'Processing failed');
+          }
+        } catch (error) {
+          console.error('Error processing video:', error);
+          alert('Failed to process video. Please try again.');
+        }
+        
+        hideLoading();
+      });
+      
+      elements.resizeBtn.addEventListener('click', async () => {
+        if (!state.selectedClip) {
+          alert('Please select a clip first');
+          return;
+        }
+        
+        const width = document.getElementById('resizeWidth').value;
+        const height = document.getElementByI
